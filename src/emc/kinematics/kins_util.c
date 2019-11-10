@@ -1,5 +1,6 @@
 #include "rtapi.h"
 #include "motion.h"
+#include "rtapi_string.h"
 
 /* Utility routines for kinematics modules
 **
@@ -92,3 +93,131 @@ int map_coordinates_to_jnumbers(char *coordinates,
     }
     return 0;
 } //map_coordinates_to_jnumbers()
+
+// IDENTITY kinematics implementation (local)
+// joint number assignments when switched to identity kinematics
+// are set by module coordinates= parameter,default ordering is:
+#define DEFAULT_LETTER_TO_JOINT_MAP "XYZABC"
+static int _JX = -1;
+static int _JY = -1;
+static int _JZ = -1;
+static int _JA = -1;
+static int _JB = -1;
+static int _JC = -1;
+static int _JU = -1;
+static int _JV = -1;
+static int _JW = -1;
+
+static int identity_kinematics_inited = 0;
+
+int identityKinematicsSetup(char *coordinates,
+                      int  max_joints,
+                      int  allow_duplicates
+                     )
+{
+    static int axis_idx_for_jno[EMCMOT_MAX_JOINTS];
+    int jno;
+    int islathe;
+    int show=0;
+
+    if (map_coordinates_to_jnumbers(coordinates,
+                                    max_joints,
+                                    allow_duplicates,
+                                    axis_idx_for_jno)) {
+       return -1; //mapping failed
+    }
+
+    for (jno=0; jno<EMCMOT_MAX_JOINTS; jno++) {
+      if (axis_idx_for_jno[jno] == 0) {_JX = jno;}
+      if (axis_idx_for_jno[jno] == 1) {_JY = jno;}
+      if (axis_idx_for_jno[jno] == 2) {_JZ = jno;}
+      if (axis_idx_for_jno[jno] == 3) {_JA = jno;}
+      if (axis_idx_for_jno[jno] == 4) {_JB = jno;}
+      if (axis_idx_for_jno[jno] == 5) {_JC = jno;}
+      if (axis_idx_for_jno[jno] == 6) {_JU = jno;}
+      if (axis_idx_for_jno[jno] == 7) {_JV = jno;}
+      if (axis_idx_for_jno[jno] == 8) {_JW = jno;}
+    }
+
+#if 0
+    rtapi_print("\nidentity_kin_init coordinates=%s identity assignments:\n",
+               coordinates);
+    for (jno=0; jno<EMCMOT_MAX_JOINTS; jno++) {
+        if (axis_idx_for_jno[jno] == -1) break; //fini
+        rtapi_print("   Joint %d ==> Axis %c\n",
+                   jno,*("XYZABCUVW"+axis_idx_for_jno[jno]));
+    }
+#endif
+
+    /* print message for unconventional ordering;
+    **   a) duplicate coordinate letters
+    **   b) letters not ordered by "XYZABCUVW" sequence
+    **      (use kinstype=both works best for these)
+    */
+    for (jno=0; jno<EMCMOT_MAX_JOINTS; jno++) {
+        if (axis_idx_for_jno[jno] == -1) break; //fini
+        if (axis_idx_for_jno[jno] != jno) { show++; } //not default order
+    }
+    islathe = !strcasecmp(coordinates,"xz"); // no show if simple lathe
+    if (show && !islathe) {
+        rtapi_print("\nidentityKinematicsSetup: coordinates:%s\n", coordinates);
+        char *p="XYZABCUVW";
+        for (jno=0; jno<EMCMOT_MAX_JOINTS; jno++) {
+            if (axis_idx_for_jno[jno] == -1) break; //fini
+            rtapi_print("   Joint %d ==> Axis %c\n",
+                       jno,*(p+axis_idx_for_jno[jno]));
+        }
+        if (kinematicsType() != KINEMATICS_BOTH) {
+            rtapi_print("identityKinematicsSetup: Recommend: kinstype=both\n");
+        }
+        rtapi_print("\n");
+    }
+
+    identity_kinematics_inited = 1;
+    return 0;
+} // identityKinematicsSetup()
+
+int identityKinematicsForward(const double *joints,
+                              EmcPose * pos,
+                              const KINEMATICS_FORWARD_FLAGS * fflags,
+                              KINEMATICS_INVERSE_FLAGS * iflags)
+{
+    if (!identity_kinematics_inited) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "identityKinematicsForward: not initialized\n");
+        return -1;
+    }
+
+    if (_JX >= 0) pos->tran.x = joints[_JX];
+    if (_JY >= 0) pos->tran.y = joints[_JY];
+    if (_JZ >= 0) pos->tran.z = joints[_JZ];
+    if (_JA >= 0) pos->a      = joints[_JA];
+    if (_JB >= 0) pos->b      = joints[_JB];
+    if (_JC >= 0) pos->c      = joints[_JC];
+    if (_JU >= 0) pos->u      = joints[_JU];
+    if (_JV >= 0) pos->v      = joints[_JV];
+    if (_JW >= 0) pos->w      = joints[_JW];
+    return 0;
+} // identityKinematicsForward()
+
+int identityKinematicsInverse(const EmcPose * pos,
+                              double *joints,
+                              const KINEMATICS_INVERSE_FLAGS * iflags,
+                              KINEMATICS_FORWARD_FLAGS * fflags)
+{
+    if (!identity_kinematics_inited) {
+        rtapi_print_msg(RTAPI_MSG_ERR,
+            "identityKinematicsInverse: not initialized\n");
+        return -1;
+    }
+    if (_JX >= 0) joints[_JX] = pos->tran.x;
+    if (_JY >= 0) joints[_JY] = pos->tran.y;
+    if (_JZ >= 0) joints[_JZ] = pos->tran.z;
+    if (_JA >= 0) joints[_JA] = pos->a;
+    if (_JB >= 0) joints[_JB] = pos->b;
+    if (_JC >= 0) joints[_JC] = pos->c;
+    if (_JU >= 0) joints[_JU] = pos->u;
+    if (_JV >= 0) joints[_JV] = pos->v;
+    if (_JW >= 0) joints[_JW] = pos->w;
+    return 0;
+} // identityKinematicsInverse()

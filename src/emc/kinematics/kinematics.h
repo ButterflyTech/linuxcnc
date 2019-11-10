@@ -116,4 +116,30 @@ extern int map_coordinates_to_jnumbers(char *coordinates,
                                        int  allow_duplicates,
                                        int  axis_idx_for_jno[]);
 
+extern int identityKinematicsSetup(char *coordinates,
+                                   int  max_joints,
+                                   int  allow_duplicates);
+
+extern int identityKinematicsForward(const double *joint,
+                                     struct EmcPose * world,
+                                     const KINEMATICS_FORWARD_FLAGS * fflags,
+                                     KINEMATICS_INVERSE_FLAGS * iflags);
+
+extern int identityKinematicsInverse(const struct EmcPose * world,
+                                     double *joint,
+                                     const KINEMATICS_INVERSE_FLAGS * iflags,
+                                     KINEMATICS_FORWARD_FLAGS * fflags);
+
+extern int kinematicsSwitchable(void);
+extern int kinematicsSwitch(int switchkins_type);
+//NOTE: switchable kinematics may require Interp::Synch
+//      before/after invoking kinematicsSwitch()
+//      A convenient command to synch is: M66 E0 L0
+
+#define KINS_NOT_SWITCHABLE \
+int kinematicsSwitchable() {return 0;} \
+int kinematicsSwitch(int switchkins_type) {return 0;} \
+EXPORT_SYMBOL(kinematicsSwitchable); \
+EXPORT_SYMBOL(kinematicsSwitch);
+
 #endif
