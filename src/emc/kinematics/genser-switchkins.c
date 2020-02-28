@@ -39,6 +39,7 @@ https://www.mail-archive.com/emc-developers@lists.sourceforge.net/msg15285.html
 struct switchdata {
     hal_bit_t *kinstype_is_0;
     hal_bit_t *kinstype_is_1;
+    hal_bit_t *kinstype_is_2;
 } *switchdata = 0;
 
 static hal_u32_t  switchkins_type;
@@ -53,17 +54,26 @@ int kinematicsSwitch(int new_kins_type)
                 "kinematicsSwitch:genserkins\n");
                 *switchdata->kinstype_is_0 = 1;
                 *switchdata->kinstype_is_1 = 0;
+                *switchdata->kinstype_is_2 = 0;
                 break;
         case 1: rtapi_print_msg(RTAPI_MSG_INFO,
                 "kinematicsSwitch:Trivkins\n");
                 *switchdata->kinstype_is_0 = 0;
                 *switchdata->kinstype_is_1 = 1;
+                *switchdata->kinstype_is_2 = 0;
+                break;
+        case 2: rtapi_print_msg(RTAPI_MSG_INFO,
+                "kinematicsSwitch:gensertoolkins\n");
+                *switchdata->kinstype_is_0 = 0;
+                *switchdata->kinstype_is_1 = 0;
+                *switchdata->kinstype_is_2 = 1;
                 break;
        default: rtapi_print_msg(RTAPI_MSG_ERR,
                 "kinematicsSwitch:BAD VALUE <%d>\n",
                 switchkins_type);
                 *switchdata->kinstype_is_1 = 0;
                 *switchdata->kinstype_is_0 = 0;
+                *switchdata->kinstype_is_2 = 0;
                 return -1; // FAIL
     }
 
@@ -78,6 +88,7 @@ int kinematicsForward(const double *joints,
 {
     switch (switchkins_type) {
        case 0: return   genserKinematicsForward(joints, pos, fflags, iflags);break;
+       case 2: return   genserKinematicsForward(joints, pos, fflags, iflags);break;
       default: return identityKinematicsForward(joints, pos, fflags, iflags);
     }
 
@@ -92,6 +103,7 @@ int kinematicsInverse(const EmcPose * pos,
 {
     switch (switchkins_type) {
        case 0: return   genserKinematicsInverse(pos, joints, iflags, fflags);break;
+       case 2: return   genserKinematicsInverse(pos, joints, iflags, fflags);break;
       default: return identityKinematicsInverse(pos, joints, iflags, fflags);
     }
 
@@ -154,6 +166,10 @@ int rtapi_app_main(void)
     if((res=hal_pin_bit_new("kinstype.is-1", HAL_OUT,
             &(switchdata->kinstype_is_1), comp_id)) < 0)
         goto error;
+    if((res=hal_pin_bit_new("kinstype.is-2", HAL_OUT,
+            &(switchdata->kinstype_is_2), comp_id)) < 0)
+        goto error;
+
 
     switchkins_type   = 0;            // startup with default (0) type
     kinematicsSwitch(switchkins_type);
