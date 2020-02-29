@@ -1,7 +1,7 @@
 INCLUDES += emc/kinematics
 
 GENSERKINSSRCS := \
-	emc/kinematics/genserkins.c
+	emc/kinematics/genserkins.c emc/kinematics/genserfuncs.c
 USERSRCS += $(GENSERKINSSRCS)
 
 DELTAMODULESRCS := emc/kinematics/lineardeltakins.cc
@@ -15,8 +15,8 @@ $(DELTAMODULE): $(call TOOBJS, $(DELTAMODULESRCS))
 PYTARGETS += $(DELTAMODULE)
 
 ../bin/genserkins: $(call TOOBJS, $(GENSERKINSSRCS)) ../lib/liblinuxcnchal.so ../lib/libposemath.so
-	$(ECHO) Linking $(notdir $@)
-	$(Q)$(CC) $(LDFLAGS) -o $@ $^
+	$(ECHO) emc/Submakefile:Linking $(notdir $@)
+	$(Q)$(CC) $(LDFLAGS) -o $@ $^ -lm
 TARGETS += ../bin/genserkins
 
 RDELTAMODULESRCS := emc/kinematics/rotarydeltakins.cc
